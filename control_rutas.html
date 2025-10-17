@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Rutas IoT</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 40px;
+            max-width: 600px;
+            width: 100%;
+        }
+        
+        h1 {
+            color: #667eea;
+            margin-bottom: 10px;
+            font-size: 28px;
+            text-align: center;
+        }
+        
+        .subtitle {
+            color: #666;
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+        
+        .config-section {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 25px;
+        }
+        
+        .config-section h3 {
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 16px;
+            display: flex;
+            align-items: center;
+        }
+        
+        .config-section h3::before {
+            content: "⚙️";
+            margin-right: 8px;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        label {
+            display: block;
+            color: #333;
+            font-weight: 600;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+        
+        input[type="text"],
+        input[type="number"],
+        select {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+        
+        input[type="text"]:focus,
+        input[type="number"]:focus,
+        select:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        
+        .coordinates {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        
+        .vehicle-selector {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-top: 10px;
+        }
+        
+        .vehicle-option {
+            background: white;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 15px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .vehicle-option:hover {
+            border-color: #667eea;
+            transform: translateY(-2px);
+        }
+        
+        .vehicle-option.selected {
+            border-color: #667eea;
+            background: #f0f4ff;
+        }
+        
+        .vehicle-option .icon {
+            font-size: 30px;
+            margin-bottom: 8px;
+        }
+        
+        .vehicle-option .name {
+            font-size: 12px;
+            color: #666;
+            font-weight: 600;
+        }
+        
+        .btn {
+            width: 100%;
+            padding: 15px;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-top: 10px;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+        
+        .btn-primary:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .status {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+            font-weight: 600;
+            display: none;
+        }
+        
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            display: block;
+        }
+        
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            display: block;
+        }
+        
+        .status.loading {
+            background: #fff3cd;
+            color: #856404;
+            display: block;
+        }
+        
+        .helper-text {
+            font-size: 12px;
+            color: #999;
+            margin-top: 5px;
+        }
+        
+        .toggle-section {
+            margin-top: 15px;
+        }
+        
+        .toggle-btn {
+            background: none;
+            border: none;
+            color: #667eea;
+            cursor: pointer;
+            font-size: 13px;
+            text-decoration: underline;
+        }
+        
+        .advanced-options {
+            display: none;
+            margin-top: 15px;
+        }
+        
+        .advanced-options.show {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🗺️ Sistema de Rutas IoT</h1>
+        <p class="subtitle">Controla tu ESP32 desde la web</p>
+        
+        <!-- Configuración de ThingSpeak -->
+        <div class="config-section">
+            <h3>Configuración de ThingSpeak</h3>
+            <div class="form-group">
+                <label for="channelId">Channel ID</label>
+                <input type="text" id="channelId" placeholder="Ej: 1234567">
+            </div>
+            <div class="form-group">
+                <label for="writeApiKey">Write API Key</label>
+                <input type="text" id="writeApiKey" placeholder="Tu Write API Key">
+            </div>
+        </div>
+        
+        <!-- Formulario de Ruta -->
+        <div class="form-group">
+            <label for="origen">📍 Dirección de Origen</label>
+            <input type="text" id="origen" placeholder="Ej: Calle 26, Bogotá, Colombia">
+            <div class="toggle-section">
+                <button class="toggle-btn" onclick="toggleCoordinatesOrigen()">
+                    ¿Usar coordenadas en su lugar?
+                </button>
+            </div>
+            <div id="coordsOrigen" class="advanced-options">
+                <div class="coordinates">
+                    <input type="number" id="origenLat" placeholder="Latitud" step="0.000001">
+                    <input type="number" id="origenLon" placeholder="Longitud" step="0.000001">
+                </div>
+            </div>
+        </div>
+        
+        <div class="form-group">
+            <label for="destino">🎯 Dirección de Destino</label>
+            <input type="text" id="destino" placeholder="Ej: Carrera 7 con 100, Bogotá">
+            <div class="toggle-section">
+                <button class="toggle-btn" onclick="toggleCoordinatesDestino()">
+                    ¿Usar coordenadas en su lugar?
+                </button>
+            </div>
+            <div id="coordsDestino" class="advanced-options">
+                <div class="coordinates">
+                    <input type="number" id="destinoLat" placeholder="Latitud" step="0.000001">
+                    <input type="number" id="destinoLon" placeholder="Longitud" step="0.000001">
+                </div>
+            </div>
+        </div>
+        
+        <div class="form-group">
+            <label>🚗 Modo de Transporte</label>
+            <div class="vehicle-selector">
+                <div class="vehicle-option selected" data-vehicle="auto" onclick="selectVehicle('auto')">
+                    <div class="icon">🚗</div>
+                    <div class="name">Auto</div>
+                </div>
+                <div class="vehicle-option" data-vehicle="bici" onclick="selectVehicle('bici')">
+                    <div class="icon">🚴</div>
+                    <div class="name">Bicicleta</div>
+                </div>
+                <div class="vehicle-option" data-vehicle="pie" onclick="selectVehicle('pie')">
+                    <div class="icon">🚶</div>
+                    <div class="name">A pie</div>
+                </div>
+            </div>
+        </div>
+        
+        <button class="btn btn-primary" onclick="enviarRuta()">
+            Enviar Ruta al ESP32
+        </button>
+        
+        <div id="status" class="status"></div>
+    </div>
+    
+    <script>
+        let selectedVehicle = 'auto';
+        
+        function selectVehicle(vehicle) {
+            selectedVehicle = vehicle;
+            document.querySelectorAll('.vehicle-option').forEach(opt => {
+                opt.classList.remove('selected');
+            });
+            document.querySelector(`[data-vehicle="${vehicle}"]`).classList.add('selected');
+        }
+        
+        function toggleCoordinatesOrigen() {
+            const coordsDiv = document.getElementById('coordsOrigen');
+            coordsDiv.classList.toggle('show');
+        }
+        
+        function toggleCoordinatesDestino() {
+            const coordsDiv = document.getElementById('coordsDestino');
+            coordsDiv.classList.toggle('show');
+        }
+        
+        function showStatus(message, type) {
+            const statusDiv = document.getElementById('status');
+            statusDiv.className = `status ${type}`;
+            statusDiv.textContent = message;
+            
+            if (type === 'success' || type === 'error') {
+                setTimeout(() => {
+                    statusDiv.style.display = 'none';
+                }, 5000);
+            }
+        }
+        
+        async function enviarRuta() {
+            const channelId = document.getElementById('channelId').value.trim();
+            const writeApiKey = document.getElementById('writeApiKey').value.trim();
+            const origen = document.getElementById('origen').value.trim();
+            const destino = document.getElementById('destino').value.trim();
+            const origenLat = document.getElementById('origenLat').value.trim();
+            const origenLon = document.getElementById('origenLon').value.trim();
+            const destinoLat = document.getElementById('destinoLat').value.trim();
+            const destinoLon = document.getElementById('destinoLon').value.trim();
+            
+            // Validaciones
+            if (!channelId || !writeApiKey) {
+                showStatus('⚠️ Por favor ingresa Channel ID y Write API Key', 'error');
+                return;
+            }
+            
+            const usingCoordsOrigen = origenLat && origenLon;
+            const usingCoordsDestino = destinoLat && destinoLon;
+            
+            if (!origen && !usingCoordsOrigen) {
+                showStatus('⚠️ Por favor ingresa una dirección o coordenadas de origen', 'error');
+                return;
+            }
+            
+            if (!destino && !usingCoordsDestino) {
+                showStatus('⚠️ Por favor ingresa una dirección o coordenadas de destino', 'error');
+                return;
+            }
+            
+            showStatus('📡 Enviando datos a ThingSpeak...', 'loading');
+            
+            // Construir URL de ThingSpeak
+            let url = `https://api.thingspeak.com/update?api_key=${writeApiKey}`;
+            
+            if (usingCoordsOrigen && usingCoordsDestino) {
+                // Enviar coordenadas directas
+                url += `&field1=${encodeURIComponent(origen || 'Origen')}`;
+                url += `&field2=${encodeURIComponent(destino || 'Destino')}`;
+                url += `&field3=${selectedVehicle}`;
+                url += `&field4=${origenLat}`;
+                url += `&field5=${origenLon}`;
+                url += `&field6=${destinoLat}`;
+                url += `&field7=${destinoLon}`;
+            } else {
+                // Enviar direcciones de texto
+                url += `&field1=${encodeURIComponent(origen)}`;
+                url += `&field2=${encodeURIComponent(destino)}`;
+                url += `&field3=${selectedVehicle}`;
+            }
+            
+            try {
+                const response = await fetch(url);
+                const result = await response.text();
+                
+                if (result !== "0") {
+                    showStatus('✅ Ruta enviada exitosamente al ESP32!', 'success');
+                    console.log('Entry ID:', result);
+                } else {
+                    showStatus('❌ Error al enviar datos. Verifica tu API Key.', 'error');
+                }
+            } catch (error) {
+                showStatus('❌ Error de conexión: ' + error.message, 'error');
+                console.error('Error:', error);
+            }
+        }
+        
+        // Guardar configuración en localStorage
+        function saveConfig() {
+            const channelId = document.getElementById('channelId').value;
+            const writeApiKey = document.getElementById('writeApiKey').value;
+            localStorage.setItem('thingspeak_channel', channelId);
+            localStorage.setItem('thingspeak_write_key', writeApiKey);
+        }
+        
+        // Cargar configuración guardada
+        function loadConfig() {
+            const channelId = localStorage.getItem('thingspeak_channel');
+            const writeApiKey = localStorage.getItem('thingspeak_write_key');
+            if (channelId) document.getElementById('channelId').value = channelId;
+            if (writeApiKey) document.getElementById('writeApiKey').value = writeApiKey;
+        }
+        
+        // Auto-guardar al escribir
+        document.getElementById('channelId').addEventListener('input', saveConfig);
+        document.getElementById('writeApiKey').addEventListener('input', saveConfig);
+        
+        // Cargar al iniciar
+        window.addEventListener('DOMContentLoaded', loadConfig);
+    </script>
+</body>
+</html>
